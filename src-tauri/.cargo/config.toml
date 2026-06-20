@@ -1,0 +1,4 @@
+# Mantem o target/ do Rust FORA do OneDrive (Desktop e sincronizado).
+# Evita o OneDrive tentar subir varios GB de artefatos de build.
+[build]
+target-dir = "C:/Users/joaof/AppData/Local/taylorai/target"
