@@ -773,7 +773,16 @@ function buildChatView() {
     input.style.height = "auto";
     input.style.height = Math.min(input.scrollHeight, 160) + "px";
   });
-  $("#send").addEventListener("click", send);
+  $("#send").addEventListener("click", onSendOrStop);
+}
+
+// Durante o streaming o botao vira "Parar" e deve ABORTAR; caso contrario, envia.
+function onSendOrStop() {
+  if (state.busy) {
+    state.abort?.abort();
+  } else {
+    send();
+  }
 }
 
 function sampField(
@@ -873,8 +882,12 @@ async function send() {
       if (chunk.done) break;
     }
   } catch (e) {
-    acc += `\n\n[erro: ${e}]`;
-    a.answer.textContent = acc;
+    // abort do usuario (botao Parar) nao e erro: so finaliza com o parcial
+    const aborted = (e as { name?: string })?.name === "AbortError";
+    if (!aborted) {
+      acc += `\n\n[erro: ${e}]`;
+      a.answer.textContent = acc;
+    }
   } finally {
     a.answer.classList.remove("streaming");
     // modelo de reasoning que so "pensou" e nao deu resposta limpa
