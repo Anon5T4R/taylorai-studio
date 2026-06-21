@@ -19,29 +19,28 @@ env:
   LLAMA_TAG: b9723
 
 jobs:
+  # Monta a matriz dinamicamente: pula macOS quando run_macos=false (validacao barata).
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set.outputs.matrix }}
+    steps:
+      - id: set
+        shell: bash
+        run: |
+          base='{"os":"windows-latest","llama_variant":"win-vulkan-x64","ext":"zip","tauri_args":"--bundles nsis"},{"os":"ubuntu-22.04","llama_variant":"ubuntu-vulkan-x64","ext":"tar.gz","tauri_args":"--bundles deb,appimage"}'
+          mac='{"os":"macos-latest","llama_variant":"macos-arm64","ext":"tar.gz","tauri_args":"--bundles dmg"},{"os":"macos-13","llama_variant":"macos-x64","ext":"tar.gz","tauri_args":"--bundles dmg"}'
+          if [ "${{ github.event.inputs.run_macos }}" = "false" ]; then
+            echo "matrix={\"include\":[$base]}" >> "$GITHUB_OUTPUT"
+          else
+            echo "matrix={\"include\":[$base,$mac]}" >> "$GITHUB_OUTPUT"
+          fi
+
   build:
-    # num run manual com run_macos=false, pula os jobs macOS (validacao barata)
-    if: ${{ !(startsWith(matrix.os, 'macos') && github.event.inputs.run_macos == 'false') }}
+    needs: setup
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - os: windows-latest
-            llama_variant: win-vulkan-x64
-            ext: zip
-            tauri_args: "--bundles nsis"
-          - os: ubuntu-22.04
-            llama_variant: ubuntu-vulkan-x64
-            ext: tar.gz
-            tauri_args: "--bundles deb,appimage"
-          - os: macos-latest # Apple Silicon (arm64)
-            llama_variant: macos-arm64
-            ext: tar.gz
-            tauri_args: "--bundles dmg"
-          - os: macos-13 # Intel (x64)
-            llama_variant: macos-x64
-            ext: tar.gz
-            tauri_args: "--bundles dmg"
+      matrix: ${{ fromJSON(needs.setup.outputs.matrix) }}
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
