@@ -114,7 +114,7 @@ const state = {
     max_tokens: 2048,
   } as SamplingParams,
   systemPrompt: "", // vazio por padrao
-  think: true, // modo raciocinio; desligado injeta /no_think (Qwen3)
+  think: false, // opt-in: reasoning desligado por padrao (injeta /no_think)
   abort: null as AbortController | null,
 };
 
@@ -744,7 +744,7 @@ function buildChatView() {
           ]),
           h("input", {
             type: "checkbox",
-            checked: true,
+            checked: state.think, // false por padrao (opt-in)
             onChange: (e: Event) => {
               state.think = (e.target as HTMLInputElement).checked;
             },
