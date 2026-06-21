@@ -3717,7 +3717,7 @@ dependencies = [
 
 [[package]]
 name = "taylorai-studio"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "raw-cpuid",
  "rfd",

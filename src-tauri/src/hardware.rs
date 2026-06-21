@@ -1,7 +1,6 @@
 // Deteccao de hardware: CPU, nucleos, flags SIMD e RAM.
 // Usado pelo auto-tuner para escolher os flags do llama-server.
 
-use raw_cpuid::CpuId;
 use serde::Serialize;
 use sysinfo::System;
 
@@ -30,7 +29,22 @@ pub struct HardwareInfo {
     pub gpu_budget_gb: f64,
 }
 
+// Em ARM (Apple Silicon / ARM Linux) nao ha SIMD x86 nem CPUID; usa NEON.
+#[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
 fn detect_features() -> Features {
+    Features {
+        sse42: false,
+        avx: false,
+        avx2: false,
+        avx512f: false,
+        fma: false,
+        best_cpu_isa: "ARM NEON".to_string(),
+    }
+}
+
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+fn detect_features() -> Features {
+    use raw_cpuid::CpuId;
     let cpuid = CpuId::new();
     let fi = cpuid.get_feature_info();
     let efi = cpuid.get_extended_feature_info();
