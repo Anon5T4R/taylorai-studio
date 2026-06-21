@@ -4,6 +4,7 @@ src-tauri/target/
 src-tauri/gen/schemas/
 icon-src.png
 
-# Binarios grandes do llama.cpp (baixe via release b9723 win-vulkan-x64)
-src-tauri/binaries/*.dll
-src-tauri/binaries/*.exe
+# Binarios do llama.cpp (baixados por plataforma; o CI faz isso automaticamente).
+# Ignora tudo na pasta menos o .gitkeep.
+src-tauri/binaries/*
+!src-tauri/binaries/.gitkeep

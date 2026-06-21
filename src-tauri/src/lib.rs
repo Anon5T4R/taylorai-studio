@@ -64,13 +64,15 @@ fn default_model_dirs() -> Vec<String> {
         }
     };
 
-    // LM Studio (varias unidades)
+    // LM Studio em varias unidades (so Windows)
+    #[cfg(windows)]
     for drive in ["C", "D", "E"] {
         push_if_exists(std::path::PathBuf::from(format!(
             "{drive}:\\LocalAIModels\\.lmstudio\\hub\\models"
         )));
     }
-    if let Some(home) = std::env::var_os("USERPROFILE") {
+    // home: USERPROFILE no Windows, HOME no Linux/macOS
+    if let Some(home) = std::env::var_os("USERPROFILE").or_else(|| std::env::var_os("HOME")) {
         let home = std::path::PathBuf::from(home);
         push_if_exists(home.join(".lmstudio").join("hub").join("models"));
         push_if_exists(home.join(".cache").join("lm-studio").join("models"));

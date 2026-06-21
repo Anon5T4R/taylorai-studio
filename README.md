@@ -73,6 +73,21 @@ npm run tauri build
 > O `target/` do Rust é redirecionado para fora do OneDrive via
 > `src-tauri/.cargo/config.toml` (evita sincronizar GBs de artefatos).
 
+## Builds multi-plataforma (GitHub Actions)
+
+`.github/workflows/release.yml` builda **Windows, Linux e macOS** automaticamente
+ao dar push numa tag `vX.Y.Z` (ou manualmente via *Run workflow*). Ele baixa o
+runtime do llama.cpp certo por plataforma (Vulkan no Windows/Linux, Metal no
+macOS), builda com a action oficial do Tauri e anexa os instaladores ao release.
+
+```bash
+git tag v0.1.3 && git push origin v0.1.3   # dispara o CI multi-plataforma
+```
+
+> Apenas o build Windows foi validado no hardware-alvo (Ryzen 5 5500U). Linux e
+> macOS são gerados pelo CI e ainda não testados em máquina real. Para bumpar o
+> runtime do llama.cpp, ajuste `LLAMA_TAG` no workflow.
+
 ## Dicas de desempenho para o 5500U
 
 1. **Na tomada + modo "Melhor desempenho"** — o boost cai muito na bateria.

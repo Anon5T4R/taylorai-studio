@@ -1,0 +1,3 @@
+# Os binarios do llama.cpp vao aqui (llama-server + libs).
+# Local: baixe a release b9723 da sua plataforma (win-vulkan-x64 / ubuntu-vulkan-x64 / macos-*).
+# CI: o .github/workflows/release.yml baixa automaticamente por plataforma.

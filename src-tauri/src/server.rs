@@ -15,6 +15,12 @@ use std::os::windows::process::CommandExt;
 #[cfg(windows)]
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
+// Nome do binario do llama-server por plataforma.
+#[cfg(windows)]
+const LLAMA_SERVER_BIN: &str = "llama-server.exe";
+#[cfg(not(windows))]
+const LLAMA_SERVER_BIN: &str = "llama-server";
+
 #[derive(Default)]
 pub struct ServerState {
     pub child: Mutex<Option<Child>>,
@@ -41,7 +47,7 @@ pub struct StatusReport {
 pub fn resolve_binaries_dir(app: &AppHandle) -> Option<PathBuf> {
     if let Ok(env_dir) = std::env::var("TAYLORAI_LLAMA_DIR") {
         let p = PathBuf::from(env_dir);
-        if p.join("llama-server.exe").exists() {
+        if p.join(LLAMA_SERVER_BIN).exists() {
             return Some(p);
         }
     }
@@ -49,7 +55,7 @@ pub fn resolve_binaries_dir(app: &AppHandle) -> Option<PathBuf> {
     if let Ok(exe) = std::env::current_exe() {
         if let Some(dir) = exe.parent() {
             let p = dir.join("binaries");
-            if p.join("llama-server.exe").exists() {
+            if p.join(LLAMA_SERVER_BIN).exists() {
                 return Some(p);
             }
         }
@@ -57,13 +63,13 @@ pub fn resolve_binaries_dir(app: &AppHandle) -> Option<PathBuf> {
     // resource_dir (bundle)
     if let Ok(res) = app.path().resource_dir() {
         let p = res.join("binaries");
-        if p.join("llama-server.exe").exists() {
+        if p.join(LLAMA_SERVER_BIN).exists() {
             return Some(p);
         }
     }
     // arvore de desenvolvimento: <crate>/binaries
     let dev = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("binaries");
-    if dev.join("llama-server.exe").exists() {
+    if dev.join(LLAMA_SERVER_BIN).exists() {
         return Some(dev);
     }
     None
@@ -133,7 +139,7 @@ pub fn start(app: &AppHandle, cfg: LlamaConfig) -> Result<RunningInfo, String> {
 
     let bin_dir = resolve_binaries_dir(app)
         .ok_or_else(|| "Nao encontrei llama-server.exe (pasta binaries).".to_string())?;
-    let exe = bin_dir.join("llama-server.exe");
+    let exe = bin_dir.join(LLAMA_SERVER_BIN);
     let args = build_args(&cfg);
 
     let mut cmd = Command::new(&exe);
@@ -255,7 +261,7 @@ pub fn vulkan_budget_gb(app: &AppHandle) -> Option<f64> {
 
 fn detect_vulkan_budget_gb(app: &AppHandle) -> Option<f64> {
     let bin_dir = resolve_binaries_dir(app)?;
-    let mut cmd = Command::new(bin_dir.join("llama-server.exe"));
+    let mut cmd = Command::new(bin_dir.join(LLAMA_SERVER_BIN));
     cmd.arg("--list-devices").current_dir(&bin_dir);
     #[cfg(windows)]
     cmd.creation_flags(CREATE_NO_WINDOW);
