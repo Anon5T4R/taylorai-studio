@@ -429,6 +429,54 @@ button {
   flex-direction: column;
   height: 100%;
 }
+.conv-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.conv-bar .mini {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.conv-list {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.conv-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px 6px 3px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  max-width: 180px;
+}
+.conv-chip:hover {
+  border-color: var(--accent);
+}
+.conv-chip.active {
+  border-color: var(--accent);
+  color: var(--text);
+  box-shadow: 0 0 0 1px var(--accent) inset;
+}
+.conv-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.conv-chip .x {
+  font-size: 14px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
 .messages {
   flex: 1;
   overflow-y: auto;

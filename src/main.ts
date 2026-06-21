@@ -102,7 +102,8 @@ const state = {
   draftCandidate: null as ModelInfo | null,
   ready: false,
   busy: false,
-  messages: [] as ChatMessage[],
+  conversations: [] as Conversation[],
+  activeConvId: "",
   sampling: {
     temperature: 0.7,
     top_p: 0.95,
@@ -144,6 +145,103 @@ const $ = <T extends HTMLElement>(sel: string) =>
 
 const DIRS_KEY = "taylorai.dirs";
 const SAMPLING_KEY = "taylorai.sampling";
+const CONVS_KEY = "taylorai.conversations";
+
+// ---------- Conversas (multi-chat) ----------
+interface Conversation {
+  id: string;
+  title: string;
+  messages: ChatMessage[];
+}
+
+function activeConv(): Conversation {
+  return (
+    state.conversations.find((c) => c.id === state.activeConvId) ??
+    newConversation()
+  );
+}
+function newConversation(): Conversation {
+  const c: Conversation = {
+    id: crypto.randomUUID?.() ?? String(Date.now()),
+    title: "Novo chat",
+    messages: [],
+  };
+  state.conversations.unshift(c);
+  state.activeConvId = c.id;
+  saveConvs();
+  return c;
+}
+function saveConvs() {
+  localStorage.setItem(CONVS_KEY, JSON.stringify(state.conversations));
+}
+function switchConv(id: string) {
+  if (state.busy) return; // nao troca no meio de uma geracao
+  state.activeConvId = id;
+  renderConvBar();
+  renderMessages();
+}
+function deleteConv(id: string) {
+  if (state.busy) return;
+  state.conversations = state.conversations.filter((c) => c.id !== id);
+  if (state.conversations.length === 0) newConversation();
+  if (!state.conversations.some((c) => c.id === state.activeConvId)) {
+    state.activeConvId = state.conversations[0].id;
+  }
+  saveConvs();
+  renderConvBar();
+  renderMessages();
+}
+function renderConvBar() {
+  const box = $("#conv-list");
+  if (!box) return;
+  box.innerHTML = "";
+  for (const c of state.conversations) {
+    const chip = h(
+      "div",
+      {
+        class: "conv-chip" + (c.id === state.activeConvId ? " active" : ""),
+        title: c.title,
+        onClick: () => switchConv(c.id),
+      },
+      [
+        h("span", { class: "conv-title" }, [c.title || "Novo chat"]),
+        h(
+          "button",
+          {
+            class: "x",
+            onClick: (e: Event) => {
+              e.stopPropagation();
+              deleteConv(c.id);
+            },
+          },
+          ["×"],
+        ),
+      ],
+    );
+    box.append(chip);
+  }
+}
+function renderMessages() {
+  const box = $("#messages");
+  if (!box) return;
+  box.innerHTML = "";
+  const conv = activeConv();
+  if (conv.messages.length === 0) {
+    box.append(
+      h("div", { class: "empty" }, [
+        "Carregue um modelo e comece a conversar. As metricas de tok/s aparecem no topo.",
+      ]),
+    );
+    return;
+  }
+  for (const m of conv.messages) {
+    if (m.role === "user") {
+      addMessage("user", m.content);
+    } else if (m.role === "assistant") {
+      addAssistantMessage().answer.textContent = m.content;
+    }
+  }
+}
 
 // ---------- Shell / layout ----------
 function buildShell() {
@@ -714,6 +812,10 @@ function buildChatView() {
   v.innerHTML = "";
   v.append(
     h("div", { class: "chat-wrap" }, [
+      h("div", { class: "conv-bar" }, [
+        h("button", { id: "new-chat", class: "mini" }, ["＋ Novo chat"]),
+        h("div", { id: "conv-list", class: "conv-list" }, []),
+      ]),
       h("div", { id: "messages", class: "messages" }, [
         h("div", { class: "empty" }, [
           "Carregue um modelo e comece a conversar. As metricas de tok/s aparecem no topo.",
@@ -774,6 +876,13 @@ function buildChatView() {
     input.style.height = Math.min(input.scrollHeight, 160) + "px";
   });
   $("#send").addEventListener("click", onSendOrStop);
+  $("#new-chat").addEventListener("click", () => {
+    if (state.busy) return;
+    newConversation();
+    renderConvBar();
+    renderMessages();
+    $<HTMLTextAreaElement>("#input")?.focus();
+  });
 }
 
 // Durante o streaming o botao vira "Parar" e deve ABORTAR; caso contrario, envia.
@@ -834,8 +943,13 @@ async function send() {
   input.value = "";
   input.style.height = "auto";
 
+  const conv = activeConv();
   addMessage("user", text);
-  state.messages.push({ role: "user", content: text });
+  conv.messages.push({ role: "user", content: text });
+  if (conv.messages.length === 1) {
+    conv.title = text.slice(0, 40); // titulo = inicio da 1a mensagem
+    renderConvBar();
+  }
 
   const a = addAssistantMessage();
   a.answer.classList.add("streaming");
@@ -848,7 +962,7 @@ async function send() {
     ...(sysContent
       ? [{ role: "system" as const, content: sysContent }]
       : []),
-    ...state.messages,
+    ...conv.messages,
   ];
 
   const port = state.rec!.config.port;
@@ -896,7 +1010,8 @@ async function send() {
         "(o modelo respondeu apenas no canal de pensamento — abra 'Pensando' acima)";
       a.answer.classList.add("muted");
     }
-    state.messages.push({ role: "assistant", content: acc });
+    conv.messages.push({ role: "assistant", content: acc });
+    saveConvs();
     state.busy = false;
     state.abort = null;
     $("#send").textContent = "Enviar";
@@ -947,6 +1062,17 @@ async function init() {
   buildShell();
   const savedSamp = JSON.parse(localStorage.getItem(SAMPLING_KEY) || "null");
   if (savedSamp) state.sampling = { ...state.sampling, ...savedSamp };
+
+  // carrega conversas salvas (ou cria a primeira)
+  const savedConvs = JSON.parse(localStorage.getItem(CONVS_KEY) || "null");
+  if (savedConvs && Array.isArray(savedConvs) && savedConvs.length) {
+    state.conversations = savedConvs;
+    state.activeConvId = savedConvs[0].id;
+  } else {
+    newConversation();
+  }
+  renderConvBar();
+  renderMessages();
 
   await listen<string>("server-log", (e) => addLog(e.payload));
   await listen<boolean>("server-ready", () =>
