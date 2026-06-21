@@ -5,6 +5,11 @@ on:
   push:
     tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      run_macos:
+        description: "Incluir macOS no build (conta 10x minutos em repo privado)"
+        type: boolean
+        default: true
 
 permissions:
   contents: write
@@ -15,6 +20,8 @@ env:
 
 jobs:
   build:
+    # num run manual com run_macos=false, pula os jobs macOS (validacao barata)
+    if: ${{ !(startsWith(matrix.os, 'macos') && github.event.inputs.run_macos == 'false') }}
     strategy:
       fail-fast: false
       matrix:
@@ -87,9 +94,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: "TaylorAI Studio ${{ github.ref_name }}"
+          # tag real em push de tag; em run manual usa um tag de teste e marca como draft
+          tagName: ${{ github.ref_type == 'tag' && github.ref_name || format('ci-test-{0}', github.run_id) }}
+          releaseName: "TaylorAI Studio ${{ github.ref_type == 'tag' && github.ref_name || 'CI test' }}"
           releaseBody: "Builds automaticos via CI (Windows / Linux / macOS). Runtime do llama.cpp ${{ env.LLAMA_TAG }} incluso. Apenas o Windows foi testado no hardware-alvo; Linux/macOS sao build de CI."
-          releaseDraft: false
+          releaseDraft: ${{ github.ref_type != 'tag' }}
           prerelease: false
           args: ${{ matrix.tauri_args }}
