@@ -1,7 +1,7 @@
 {
   "name": "taylorai-studio",
   "private": true,
-  "version": "0.1.5",
+  "version": "0.1.6",
   "type": "module",
   "description": "Clone do LM Studio focado em extrair o maximo de CPUs/iGPUs com modelos GGUF (llama.cpp).",
   "scripts": {

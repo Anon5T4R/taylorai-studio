@@ -87,6 +87,19 @@ fn default_model_dirs() -> Vec<String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Linux: webkit2gtk recente mostra TELA BRANCA com o renderer DMABUF em
+    // varios drivers (tipico em AMD/Mesa). Desliga antes do GTK inicializar.
+    // Tambem desliga o modo de compositing como reforco contra glitches/branco.
+    #[cfg(target_os = "linux")]
+    {
+        if std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none() {
+            std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+        }
+        if std::env::var_os("WEBKIT_DISABLE_COMPOSITING_MODE").is_none() {
+            std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
+        }
+    }
+
     tauri::Builder::default()
         .manage(ServerState::default())
         .invoke_handler(tauri::generate_handler![
