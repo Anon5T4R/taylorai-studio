@@ -954,18 +954,18 @@ async function send() {
   const a = addAssistantMessage();
   a.answer.classList.add("streaming");
 
+  const sysContent = state.systemPrompt.trim();
   const noThinkDirective = `/no_think\n/nothink\n/nothinking\n/no_thinking\n</think>`;
-  const sysContent = (
-    state.think
-      ? state.systemPrompt
-      : `${state.systemPrompt}\n${noThinkDirective}`
-  ).trim();
   const msgs: ChatMessage[] = [
     // so envia system message se houver conteudo
     ...(sysContent
       ? [{ role: "system" as const, content: sysContent }]
       : []),
-    ...conv.messages,
+    ...conv.messages.map((m, i) =>
+      !state.think && i === conv.messages.length - 1 && m.role === "user"
+        ? { ...m, content: `${noThinkDirective}\n\n${m.content}` }
+        : m
+    ),
   ];
 
   const port = state.rec!.config.port;
