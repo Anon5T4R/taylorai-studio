@@ -35,6 +35,7 @@ export async function* streamChat(
   messages: ChatMessage[],
   params: SamplingParams,
   signal: AbortSignal,
+  think: boolean = false,
 ): AsyncGenerator<StreamChunk> {
   const body = {
     model: "local",
@@ -47,6 +48,15 @@ export async function* streamChat(
     min_p: params.min_p,
     repeat_penalty: params.repeat_penalty,
     max_tokens: params.max_tokens,
+    // Controle de reasoning por request (llama-server):
+    //   reasoning_budget = 0  -> encerra o pensamento na hora (resposta direta)
+    //   reasoning_budget = -1 -> pensamento livre
+    // Funciona nos Qwen3 / 3.5 / 3.6 e familias hibridas SEM reiniciar o
+    // servidor. Substitui o antigo "/no_think" no prompt, que os Qwen recentes
+    // ja nao respeitam (e ainda poluia o historico). O enable_thinking via
+    // template e reforco para modelos cujo chat template decide pelo kwarg.
+    reasoning_budget: think ? -1 : 0,
+    chat_template_kwargs: { enable_thinking: think },
   };
 
   const resp = await fetch(`http://127.0.0.1:${port}/v1/chat/completions`, {

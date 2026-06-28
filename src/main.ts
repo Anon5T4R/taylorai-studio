@@ -115,7 +115,7 @@ const state = {
     max_tokens: 2048,
   } as SamplingParams,
   systemPrompt: "", // vazio por padrao
-  think: false, // opt-in: reasoning desligado por padrao (injeta /no_think)
+  think: false, // opt-in: reasoning desligado por padrao (reasoning_budget=0)
   abort: null as AbortController | null,
 };
 
@@ -842,7 +842,7 @@ function buildChatView() {
         }, [state.systemPrompt]),
         h("label", { class: "ctrl toggle", style: "margin-top:8px" }, [
           h("span", {}, [
-            "Modo raciocínio (pensar) — desligar envia /no_think (nem todo modelo respeita)",
+            "Modo raciocínio (pensar) — desligado por padrão (reasoning_budget=0; sem reiniciar)",
           ]),
           h("input", {
             type: "checkbox",
@@ -955,17 +955,12 @@ async function send() {
   a.answer.classList.add("streaming");
 
   const sysContent = state.systemPrompt.trim();
-  const noThinkDirective = `/no_think\n/nothink\n/nothinking\n/no_thinking\n</think>`;
   const msgs: ChatMessage[] = [
     // so envia system message se houver conteudo
-    ...(sysContent
-      ? [{ role: "system" as const, content: sysContent }]
-      : []),
-    ...conv.messages.map((m, i) =>
-      !state.think && i === conv.messages.length - 1 && m.role === "user"
-        ? { ...m, content: `${noThinkDirective}\n\n${m.content}` }
-        : m
-    ),
+    ...(sysContent ? [{ role: "system" as const, content: sysContent }] : []),
+    // historico cru: o controle de pensar/nao-pensar vai via reasoning_budget
+    // no corpo do request (ver streamChat), nao mais injetado no texto.
+    ...conv.messages,
   ];
 
   const port = state.rec!.config.port;
@@ -982,6 +977,7 @@ async function send() {
       msgs,
       state.sampling,
       state.abort.signal,
+      state.think,
     )) {
       if (chunk.reasoning) {
         think += chunk.reasoning;

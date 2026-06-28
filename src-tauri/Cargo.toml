@@ -1,6 +1,6 @@
 [package]
 name = "taylorai-studio"
-version = "0.1.9"
+version = "0.1.10"
 description = "Runner de GGUF otimizado para CPU/iGPU (llama.cpp)"
 authors = ["joaof"]
 edition = "2021"

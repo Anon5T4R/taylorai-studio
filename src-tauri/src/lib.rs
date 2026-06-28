@@ -98,6 +98,17 @@ pub fn run() {
         if std::env::var_os("WEBKIT_DISABLE_COMPOSITING_MODE").is_none() {
             std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
         }
+        // No Wayland o webkitgtk (ainda mais empacotado em AppImage) costuma
+        // renderizar tela branca mesmo com o DMABUF desligado; forcar XWayland
+        // (GDK_BACKEND=x11) e o remedio mais confiavel. So ativa o fallback se
+        // estivermos em Wayland e o usuario nao tiver escolhido um backend.
+        let on_wayland = std::env::var_os("WAYLAND_DISPLAY").is_some()
+            || std::env::var("XDG_SESSION_TYPE")
+                .map(|t| t.eq_ignore_ascii_case("wayland"))
+                .unwrap_or(false);
+        if on_wayland && std::env::var_os("GDK_BACKEND").is_none() {
+            std::env::set_var("GDK_BACKEND", "x11");
+        }
     }
 
     tauri::Builder::default()
